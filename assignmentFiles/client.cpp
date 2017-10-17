@@ -117,12 +117,13 @@ int main(int argc, char* argv[])
 	char spacket[37];
 	pack.serialize(spacket); //SEGFAULT
 
-	if ((numBytes = sendto(sockfd, spacket, 30, 0, p->ai_addr, p->ai_addrlen)) == -1) 
+	if ((numBytes = sendto(sockfd, spacket, 37, 0, p->ai_addr, p->ai_addrlen)) == -1) 
 	    {
 	   		perror("talker: sendto");
 	    	exit(1);
 		}
 //*/
 	infile.close();
+	close(sockfd);
 	return 0;
 }

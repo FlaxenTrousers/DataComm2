@@ -25,8 +25,8 @@ int randomPortNumber()
 }
 
 packet depacketizeMeCaptain(char * spacket) {
-	char blank[1];
-	packet pack = packet(0, 0, 0, blank);
+	char blank[0];
+	packet pack = packet(0, 0, 0, new char[0]);
 	pack.deserialize(spacket);
 	return pack;
 }
@@ -93,16 +93,17 @@ int main(int argc, char *argv[])
 			perror("recvfrom");
 			exit(1);
 		}
+		printf("%s\n", buf);
 
-		char spacket[numbytes];
-		strncpy(spacket, buf, numbytes);
-		packet pack = depacketizeMeCaptain(spacket);
+		packet pack = depacketizeMeCaptain(buf);
 
+		pack.printContents();
+		
 		if (expectedSeqnum == pack.getSeqNum()) {
-			char spacketACK[7];
+			char spacketACK[37];
 			packet ACKpack = ACKnCrunch(expectedSeqnum);
 			ACKpack.serialize(spacketACK);
-			if ((numbytes = sendto(sockfd, spacket, strlen(spacket), 0,
+			if ((numbytes = sendto(sockfd, spacketACK, strlen(spacketACK), 0,
 				p->ai_addr, p->ai_addrlen)) == -1) {
 				perror("ACK: sendto");
 				exit(1);
@@ -111,7 +112,7 @@ int main(int argc, char *argv[])
 
 		if (pack.getType() == 3) {
 			// send final ACK
-			char spacketFinalACK[7];
+			char spacketFinalACK[37];
 			packet finalACK = finalCrunch(expectedSeqnum);
 			finalACK.serialize(spacketFinalACK);
 			if ((numbytes = sendto(sockfd, spacketFinalACK, strlen(spacketFinalACK), 0,
@@ -121,6 +122,7 @@ int main(int argc, char *argv[])
 			}
 			break;
 		} 
+		
 	}
 
 	close(sockfd);
