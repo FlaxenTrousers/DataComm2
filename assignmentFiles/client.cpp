@@ -42,18 +42,21 @@ void sendPackets(char * file, int sockfd, struct addrinfo *p)
 	ifstream infile;
 	infile.open(file);
 
-//	while(!infile.eof())
+	while(!infile.eof())
 	{
+
 		// Seek to proper space in file.
 		infile.seekg(packetNumber * 30);
 		infile.read(packetData, sizeof packetData);
 		//Make packet and increase sequence number.
-		packet pack = packet(1, seqNum, 30, packetData);
+		actualRead = infile.gcount();
+		if (actualRead == 0) break;
+		packet pack = packet(1, seqNum, actualRead, packetData);
 		seqNum = (seqNum + 1) % SEQNUM;
 		packetNumber++;
 
 		// Serialize packet and send data.
-		char spacket[37];
+		char spacket[actualRead+7];
 		pack.serialize(spacket);
 
 		printf("%s\n", spacket);

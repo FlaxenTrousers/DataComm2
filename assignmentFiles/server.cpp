@@ -92,9 +92,14 @@ int main(int argc, char *argv[])
 			exit(1);
 		}
 
-		packet recvPacket = packet(0, 0, 0, new char[0]);
-		recvPacket.deserialize(buf);
+		
 
+		packet recvPacket = packet(0, 0, 0, new char[0]);
+
+		recvPacket.printContents();
+		printf("%s\n", buf);
+		recvPacket.deserialize(buf);
+		printf("%s\n", buf);
 		if (expectedSeqnum == recvPacket.getSeqNum() && recvPacket.getType() == 3) {
 			// send final ACK
 			char spacketFinalACK[38];
@@ -108,11 +113,15 @@ int main(int argc, char *argv[])
 			break;
 		} 
 
+		printf("%s\n", buf);
 		if (expectedSeqnum == recvPacket.getSeqNum() && recvPacket.getType() == 1) {
 			//output << buf;
 			char spacketACK[38];
 			packet ACKpack = packet(0, expectedSeqnum, 0, new char[0]);
 			ACKpack.serialize(spacketACK);
+
+			printf("%s\n", buf);
+
 			if ((numbytes = sendto(sockfdSend, spacketACK, strlen(spacketACK), 0,
 				p->ai_addr, p->ai_addrlen)) == -1) {
 				perror("ACK: sendto");
