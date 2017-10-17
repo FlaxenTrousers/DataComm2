@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 		return 2;
 	}
 
-	if ((rv = getaddrinfo(NULL, argv[3], &hints, &servinfo)) != 0) {
+	if ((rv = getaddrinfo("127.0.0.1", argv[3], &hints, &servinfo)) != 0) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
 		return 1;
 	}
