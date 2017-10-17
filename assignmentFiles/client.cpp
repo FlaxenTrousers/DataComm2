@@ -47,6 +47,7 @@ void sendPackets(char * file, int sockfd, struct addrinfo *p)
 		// Seek to proper space in file.
 		infile.seekg(packetNumber * 30);
 		infile.read(packetData, sizeof packetData);
+		actualRead;
 		//Make packet and increase sequence number.
 		packet pack = packet(1, seqNum, 30, packetData);
 		seqNum = (seqNum + 1) % SEQNUM;
