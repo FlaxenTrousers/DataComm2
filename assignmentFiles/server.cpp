@@ -116,8 +116,8 @@ int main(int argc, char *argv[])
 			perror("recvfrom");
 			exit(1);
 		}
-
 		packet pack = depacketizeMeCaptain(buf);
+		
 
 		if (pack.getType() == 3) {
 			// send final ACK
@@ -152,7 +152,9 @@ int main(int argc, char *argv[])
 				perror("ACK: sendto");
 				exit(1);
 			}
-		}
+			break;
+		} 
+
 	}
 
 	close(sockfdReceive);
