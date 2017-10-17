@@ -104,6 +104,7 @@ int main(int argc, char *argv[])
 		if (expectedSeqnum == recvPacket.getSeqNum() && recvPacket.getType() == 3) {
 			bzero(spacketACK, 38);
 			audit << recvPacket.getSeqNum();
+			audit << "\n";
 			packet finalACK = packet(2, expectedSeqnum, 0, finalBlank);
 			finalACK.serialize(spacketACK);
 			if ((numbytes = sendto(sockfdSend, spacketACK, strlen(spacketACK), 0,
@@ -115,13 +116,14 @@ int main(int argc, char *argv[])
 			audit.close();
 			close(sockfdReceive);
 			close(sockfdSend);
-			exit(0);
+			break;
 		} 
 
 		if (expectedSeqnum == recvPacket.getSeqNum() && recvPacket.getType() == 1) {
 			bzero(spacketACK, 38);
 			output << recvPacket.getData();
 			audit << recvPacket.getSeqNum();
+			audit << "\n";
 			packet ACKpack = packet(0, expectedSeqnum, 0, blank);
 			ACKpack.serialize(spacketACK);
 			if ((numbytes = sendto(sockfdSend, spacketACK, strlen(spacketACK), 0,
