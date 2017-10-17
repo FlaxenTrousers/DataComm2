@@ -93,7 +93,6 @@ int main(int argc, char* argv[])
 	}
 	// clear the linked list
 	freeaddrinfo(servinfo);
-
 	// Build Packets
 	//
 	char packetData[30];
@@ -104,27 +103,26 @@ int main(int argc, char* argv[])
 	int extraBytes = 0;
 	int seqNum = 0;
 	int packetNumber = 0;
-	ofstream infile;
+	ifstream infile;
 	infile.open(argv[4]);
 
 	// Seek to proper space in file.
 	infile.seekg(packetNumber * 30);
 	infile.read(packetData, sizeof packetData);
-
 	//Make packet and increase sequence number.
 	packet pack = packet(1, seqNum, 30, packetData);
 	seqNum = (seqNum + 1) % SEQNUM;
 
 	// Serialize packet and send data.
-	char * spacket;
-	pack.serialize(spacket);
+	char spacket[37];
+	pack.serialize(spacket); //SEGFAULT
 
-	if ((numBytes = send(sockfd, pack, 30, 0)) == -1) 
+	if ((numBytes = sendto(sockfd, spacket, 30, 0, p->ai_addr, p->ai_addrlen)) == -1) 
 	    {
 	   		perror("talker: sendto");
 	    	exit(1);
 		}
-
+//*/
 	infile.close();
 	return 0;
 }
