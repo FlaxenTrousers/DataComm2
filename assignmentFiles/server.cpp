@@ -81,10 +81,12 @@ int main(int argc, char *argv[])
 	}
 
 	freeaddrinfo(servinfo);
-	ofstream output;
+	ofstream output, audit;
 	output.open("output.txt");
+	audit.open("arrival.log");
 	char spacketACK[38];
 	char* blank = new char[0];
+	char* finalBlank = new char[0];
 
 	while(1) {
 		bzero(buf, MAXBUFLEN);
@@ -100,7 +102,8 @@ int main(int argc, char *argv[])
 
 		if (expectedSeqnum == recvPacket.getSeqNum() && recvPacket.getType() == 3) {
 			bzero(spacketACK, 38);
-			packet finalACK = packet(0, expectedSeqnum, 0, blank);
+			audit << recvPacket.getSeqNum();
+			packet finalACK = packet(0, expectedSeqnum, 0, finalBlank);
 			finalACK.serialize(spacketACK);
 			if ((numbytes = sendto(sockfdSend, spacketACK, strlen(spacketACK), 0,
 				p->ai_addr, p->ai_addrlen)) == -1) {
@@ -113,6 +116,7 @@ int main(int argc, char *argv[])
 		if (expectedSeqnum == recvPacket.getSeqNum() && recvPacket.getType() == 1) {
 			bzero(spacketACK, 38);
 			output << recvPacket.getData();
+			audit << recvPacket.getSeqNum();
 			packet ACKpack = packet(0, expectedSeqnum, 0, blank);
 			ACKpack.serialize(spacketACK);
 			if ((numbytes = sendto(sockfdSend, spacketACK, strlen(spacketACK), 0,
@@ -133,8 +137,9 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
-	
+
 	output.close();
+	audit.close();
 	close(sockfdReceive);
 	close(sockfdSend);
 
