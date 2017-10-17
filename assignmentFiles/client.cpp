@@ -27,7 +27,7 @@
 
 using namespace std;
 
-void sendPackets(char * file, int sockfd, struct addrinfo *p)
+int sendPackets(char * file, int sockfd, struct addrinfo *p)
 {
 	// Build Packets
 	//
@@ -56,7 +56,7 @@ void sendPackets(char * file, int sockfd, struct addrinfo *p)
 		packetNumber++;
 
 		// Serialize packet and send data.
-		char spacket[actualRead+7];
+		char spacket[actualRead+8];
 		pack.serialize(spacket);
 		printf("%s\n", spacket);
 		if ((numBytes = sendto(sockfd, spacket, strlen(spacket), 0, p->ai_addr, p->ai_addrlen)) == -1) 
@@ -66,15 +66,26 @@ void sendPackets(char * file, int sockfd, struct addrinfo *p)
 		}
 	}
 
+	packet Qpack = packet(3, seqNum, 0, NULL);
+	char Qpacket[38];
+	Qpack.serialize(Qpacket);
+	if ((numBytes = sendto(sockfd, Qpacket, strlen(Qpacket), 0, p->ai_addr, p->ai_addrlen)) == -1) 
+    {
+   		perror("talker: sendto");
+    	exit(1);
+	}
+
+
 	infile.close();
+	return seqNum;
 }
 
-void sendEOTPacket(char * file, int sockfd, struct addrinfo *p)
+void sendEOTPacket(int sockfd, struct addrinfo *p, int seqNum)
 {
 	int numBytes;
 
-	packet qpack = packet(3, 0, 0, NULL);
-	char qpacket[8];
+	packet qpack = packet(3, (seqNum+1)%8, 0, new char[0]);
+	char qpacket[38];
 	qpack.serialize(qpacket); 
 
 	if ((numBytes = sendto(sockfd, qpacket, strlen(qpacket), 0, p->ai_addr, p->ai_addrlen)) == -1) 
@@ -188,7 +199,7 @@ int main(int argc, char* argv[])
 
 	sendPackets(argv[4], sockfd, p);
 
-
+	//sendEOTPacket(sockfd, p, );
 	// receive ACKS
 	addr_len = sizeof their_addr;
 	if ((numbytes = recvfrom(sockfdReceive, buf, MAXBUFLEN - 1, 0,
