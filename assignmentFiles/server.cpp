@@ -15,31 +15,6 @@
 
 #define MAXBUFLEN 100
 
-int randomPortNumber()
-{
-	srand ((unsigned int)time(NULL));
-	int min = 1024;
-	int max = 65535;
-	int range = (max - min) + 1;
-	int rnd = min + rand() % range;
-}
-
-packet depacketizeMeCaptain(char * spacket) {
-	packet pack = packet(0, 0, 0, new char[0]);
-	pack.deserialize(spacket);
-	return pack;
-}
-
-packet ACKnCrunch(int expectedSeqnum) {
-	packet pack = packet(0, expectedSeqnum, 0, NULL);
-	return pack;
-}
-
-packet finalCrunch(int expectedSeqnum) {
-	packet pack = packet(2, expectedSeqnum, 0, NULL);
-	return pack;
-}
-
 int main(int argc, char *argv[])
 {
 	int sockfdReceive;
@@ -116,13 +91,14 @@ int main(int argc, char *argv[])
 			perror("recvfrom");
 			exit(1);
 		}
-		packet pack = depacketizeMeCaptain(buf);
-		
 
-		if (pack.getType() == 3) {
+		packet recvPacket = packet(0, 0, 0, new char[0]);
+		recvPacket.deserialize(buf);
+
+		if (expectedSeqnum == recvPacket.getSeqNum() && recvPacket.getType() == 3) {
 			// send final ACK
-			char spacketFinalACK[7];
-			packet finalACK = finalCrunch(expectedSeqnum);
+			char spacketFinalACK[38];
+			packet finalACK = packet(0, expectedSeqnum, 0, new char[0]);
 			finalACK.serialize(spacketFinalACK);
 			if ((numbytes = sendto(sockfdSend, spacketFinalACK, strlen(spacketFinalACK), 0,
 				p->ai_addr, p->ai_addrlen)) == -1) {
@@ -132,9 +108,10 @@ int main(int argc, char *argv[])
 			break;
 		} 
 
-		if (expectedSeqnum == pack.getSeqNum()) {
-			char spacketACK[7];
-			packet ACKpack = ACKnCrunch(expectedSeqnum);
+		if (expectedSeqnum == recvPacket.getSeqNum() && recvPacket.getType() == 1) {
+			//output << buf;
+			char spacketACK[38];
+			packet ACKpack = packet(0, expectedSeqnum, 0, new char[0]);
 			ACKpack.serialize(spacketACK);
 			if ((numbytes = sendto(sockfdSend, spacketACK, strlen(spacketACK), 0,
 				p->ai_addr, p->ai_addrlen)) == -1) {
@@ -144,17 +121,15 @@ int main(int argc, char *argv[])
 			expectedSeqnum += 1;
 		}
 		else {
-			char spacketACK[7];
-			packet ACKpack = ACKnCrunch(expectedSeqnum - 1);
+			char spacketACK[38];
+			packet ACKpack = packet(0, (expectedSeqnum - 1), 0, new char[0]);
 			ACKpack.serialize(spacketACK);
 			if ((numbytes = sendto(sockfdSend, spacketACK, strlen(spacketACK), 0,
 				p->ai_addr, p->ai_addrlen)) == -1) {
 				perror("ACK: sendto");
 				exit(1);
 			}
-			break;
-		} 
-
+		}
 	}
 
 	close(sockfdReceive);
