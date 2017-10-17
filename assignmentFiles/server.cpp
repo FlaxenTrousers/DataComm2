@@ -81,11 +81,11 @@ int main(int argc, char *argv[])
 	}
 
 	freeaddrinfo(servinfo);
-	//ofstream output;
-	//output.open("output.txt");
+	ofstream output;
+	output.open("output.txt");
 	char spacketACK[38];
 	char* blank = new char[0];
-	packet recvPacket = packet(0, 0, 0, blank);
+
 	while(1) {
 		bzero(buf, MAXBUFLEN);
 		addr_len = sizeof their_addr;
@@ -95,11 +95,10 @@ int main(int argc, char *argv[])
 			exit(1);
 		}
 
-		
+		packet recvPacket = packet(0, 0, 0, blank);
 		recvPacket.deserialize(buf);
 
 		if (expectedSeqnum == recvPacket.getSeqNum() && recvPacket.getType() == 3) {
-			// send final ACK
 			bzero(spacketACK, 38);
 			packet finalACK = packet(0, expectedSeqnum, 0, blank);
 			finalACK.serialize(spacketACK);
@@ -112,8 +111,8 @@ int main(int argc, char *argv[])
 		} 
 
 		if (expectedSeqnum == recvPacket.getSeqNum() && recvPacket.getType() == 1) {
-			//output << buf;
 			bzero(spacketACK, 38);
+			output << recvPacket.getData();
 			packet ACKpack = packet(0, expectedSeqnum, 0, blank);
 			ACKpack.serialize(spacketACK);
 			if ((numbytes = sendto(sockfdSend, spacketACK, strlen(spacketACK), 0,
@@ -125,8 +124,8 @@ int main(int argc, char *argv[])
 		}
 		else {
 			bzero(spacketACK, 38);
-			packet ACKpack = packet(0, (expectedSeqnum - 1), 0, blank);
-			ACKpack.serialize(spacketACK);
+			packet ACKbadPack = packet(0, ((expectedSeqnum + 7) % 8), 0, blank);
+			ACKbadPack.serialize(spacketACK);
 			if ((numbytes = sendto(sockfdSend, spacketACK, strlen(spacketACK), 0,
 				p->ai_addr, p->ai_addrlen)) == -1) {
 				perror("ACK: sendto");
@@ -134,7 +133,8 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
-
+	
+	output.close();
 	close(sockfdReceive);
 	close(sockfdSend);
 
