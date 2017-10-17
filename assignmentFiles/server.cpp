@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 				perror("ACK: sendto");
 				exit(1);
 			}
-			expectedSeqnum += 1;
+			expectedSeqnum = (expectedSeqnum + 1) % 8;
 		}
 		else {
 			char spacketACK[38];
