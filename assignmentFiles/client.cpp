@@ -56,6 +56,8 @@ void sendPackets(char * file, int sockfd, struct addrinfo *p)
 		char spacket[37];
 		pack.serialize(spacket);
 
+		printf("%s\n", spacket);
+
 		if ((numBytes = sendto(sockfd, spacket, strlen(spacket), 0, p->ai_addr, p->ai_addrlen)) == -1) 
 	    {
 	   		perror("talker: sendto");
