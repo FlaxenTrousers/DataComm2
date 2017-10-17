@@ -94,11 +94,12 @@ int main(int argc, char *argv[])
 			exit(1);
 		}
 
-		char * spacket = buf;
+		char spacket[numbytes];
+		strncpy(spacket, buf, numbytes);
 		packet pack = depacketizeMeCaptain(spacket);
 
 		if (expectedSeqnum == pack.getSeqNum()) {
-			char * spacketACK;
+			char spacketACK[7];
 			packet ACKpack = ACKnCrunch(expectedSeqnum);
 			ACKpack.serialize(spacketACK);
 			if ((numbytes = sendto(sockfd, spacket, strlen(spacket), 0,
@@ -110,7 +111,7 @@ int main(int argc, char *argv[])
 
 		if (pack.getType() == 3) {
 			// send final ACK
-			char * spacketFinalACK;
+			char spacketFinalACK[7];
 			packet finalACK = finalCrunch(expectedSeqnum);
 			finalACK.serialize(spacketFinalACK);
 			if ((numbytes = sendto(sockfd, spacketFinalACK, strlen(spacketFinalACK), 0,
