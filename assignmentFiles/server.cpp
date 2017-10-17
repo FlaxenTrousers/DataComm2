@@ -117,6 +117,7 @@ int main(int argc, char *argv[])
 		printf("%s\n", buf);
 
 		packet pack = depacketizeMeCaptain(buf);
+<<<<<<< HEAD
 		
 		pack.printContents();
 		if (pack.getType() == 3) 
@@ -126,10 +127,13 @@ int main(int argc, char *argv[])
 			packet finalACK = finalCrunch(expectedSeqnum);
 			finalACK.serialize(spacketFinalACK);
 			if ((numbytes = sendto(sockfdSend, spacketFinalACK, strlen(spacketFinalACK), 0,
+=======
+>>>>>>> master
 				p->ai_addr, p->ai_addrlen)) == -1) {
 				perror("ACK: sendto");
 				exit(1);
 			}
+<<<<<<< HEAD
 			break;
 		} 
 
@@ -145,6 +149,9 @@ int main(int argc, char *argv[])
 			}
 		}
 		
+=======
+		}
+>>>>>>> master
 	}
 
 	close(sockfdReceive);
