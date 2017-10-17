@@ -72,12 +72,13 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
-		break;
-	}
+		if (connect(sockfdSend, p->ai_addr, p->ai_addrlen) == -1) {
+			close(sockfdSend);
+			perror("server: connect");
+			continue;
+		}
 
-	if (p == NULL) {
-		fprintf(stderr, "receiver: failed to bind socket\n");
-		return 2;
+		break;
 	}
 
 	freeaddrinfo(servinfo);
@@ -103,14 +104,18 @@ int main(int argc, char *argv[])
 		if (expectedSeqnum == recvPacket.getSeqNum() && recvPacket.getType() == 3) {
 			bzero(spacketACK, 38);
 			audit << recvPacket.getSeqNum();
-			packet finalACK = packet(0, expectedSeqnum, 0, finalBlank);
+			packet finalACK = packet(2, expectedSeqnum, 0, finalBlank);
 			finalACK.serialize(spacketACK);
 			if ((numbytes = sendto(sockfdSend, spacketACK, strlen(spacketACK), 0,
 				p->ai_addr, p->ai_addrlen)) == -1) {
 				perror("ACK: sendto");
 				exit(1);
 			}
-			break;
+			output.close();
+			audit.close();
+			close(sockfdReceive);
+			close(sockfdSend);
+			exit(0);
 		} 
 
 		if (expectedSeqnum == recvPacket.getSeqNum() && recvPacket.getType() == 1) {
@@ -137,11 +142,6 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
-
-	output.close();
-	audit.close();
-	close(sockfdReceive);
-	close(sockfdSend);
 
 	return 0;
 }
