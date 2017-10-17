@@ -21,10 +21,51 @@
 #include <iostream>
 #include "packet.cpp"
 
+#define MAXBUFLEN 100
 #define SEQNUM 8
 #define WINDOWSIZE 7  // Size of the sliding window. It will be the number of seq numbers minus 1.
 
 using namespace std;
+
+void sendPackets(char * file, int sockfd, struct addrinfo *p)
+{
+	// Build Packets
+	//
+	char packetData[30];
+	int numBytes;
+	// Vars for file reading
+	int actualRead = 0;
+	int wholePacks = 0;
+	int extraBytes = 0;
+	int seqNum = 0;
+	int packetNumber = 0;
+	ifstream infile;
+	infile.open(file);
+
+	while(!infile.eof())
+	{
+		// Seek to proper space in file.
+		infile.seekg(packetNumber * 30);
+		infile.read(packetData, sizeof packetData);
+		//Make packet and increase sequence number.
+		packet pack = packet(1, seqNum, 30, packetData);
+		seqNum = (seqNum + 1) % SEQNUM;
+		packetNumber++;
+
+		// Serialize packet and send data.
+		char spacket[37];
+		pack.serialize(spacket);
+
+		if ((numBytes = sendto(sockfd, spacket, strlen(spacket), 0, p->ai_addr, p->ai_addrlen)) == -1) 
+	    {
+	   		perror("talker: sendto");
+	    	exit(1);
+		}
+	}
+
+	infile.close();
+}
+
 
 
 int main(int argc, char* argv[])
@@ -47,7 +88,7 @@ int main(int argc, char* argv[])
 	//Necessary variables for UDP connection.
 
 	struct addrinfo hints;
-	int sockfd;
+	int sockfd, sockfdReceive;
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
 	hints.ai_flags = AI_PASSIVE;
@@ -57,6 +98,40 @@ int main(int argc, char* argv[])
 	struct addrinfo *servinfo, *p;
 	int rv;
 	char s[INET6_ADDRSTRLEN];
+	int numbytes;
+	struct sockaddr_storage their_addr;
+	char buf[MAXBUFLEN];
+	socklen_t addr_len;
+
+	if ((rv = getaddrinfo(NULL, argv[3], &hints, &servinfo)) != 0) 
+	{
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+		return 1;
+	}
+
+	// loop through all the results and bind to the first we can
+	for(p = servinfo; p != NULL; p = p->ai_next) {
+		if ((sockfdReceive = socket(p->ai_family, p->ai_socktype,
+				p->ai_protocol)) == -1) 
+		{
+			perror("receiver: socket");
+			continue;
+		}
+
+		if (bind(sockfdReceive, p->ai_addr, p->ai_addrlen) == -1) 
+		{
+			close(sockfdReceive);
+			perror("receiver: bind");
+		}
+
+		break;
+	}
+
+	if (p == NULL) {
+		fprintf(stderr, "receiver: failed to bind socket\n");
+		return 2;
+	}
+
 
 	// Get the server(emulator) address.
 	if ((rv = getaddrinfo("127.0.0.1", argv[2], &hints, &servinfo)) != 0)
@@ -93,37 +168,31 @@ int main(int argc, char* argv[])
 	}
 	// clear the linked list
 	freeaddrinfo(servinfo);
-	// Build Packets
-	//
-	char packetData[30];
 
-	// Vars for file reading
-	int actualRead = 0;
-	int wholePacks = 0;
-	int extraBytes = 0;
-	int seqNum = 0;
-	int packetNumber = 0;
-	ifstream infile;
-	infile.open(argv[4]);
+	sendPackets(argv[4], sockfd, p);
 
-	// Seek to proper space in file.
-	infile.seekg(packetNumber * 30);
-	infile.read(packetData, sizeof packetData);
-	//Make packet and increase sequence number.
-	packet pack = packet(1, seqNum, 30, packetData);
-	seqNum = (seqNum + 1) % SEQNUM;
+/*
+	packet qpack = packet(3, 0, 0, NULL);
+	char qpacket[8];
+	qpack.serialize(qpacket); 
 
-	// Serialize packet and send data.
-	char spacket[37];
-	pack.serialize(spacket); //SEGFAULT
+	if ((numBytes = sendto(sockfd, qpacket, strlen(qpacket), 0, p->ai_addr, p->ai_addrlen)) == -1) 
+    {
+   		perror("talker: sendto");
+    	exit(1);
+	}
+*/
+	// receive ACKS
+	addr_len = sizeof their_addr;
+	if ((numbytes = recvfrom(sockfdReceive, buf, MAXBUFLEN - 1, 0,
+		(struct sockaddr *)&their_addr, &addr_len)) == -1) 
+	{
+		perror("recvfrom");
+		exit(1);
+	}
+	printf("%s\n", buf);
 
-	if ((numBytes = sendto(sockfd, spacket, 37, 0, p->ai_addr, p->ai_addrlen)) == -1) 
-	    {
-	   		perror("talker: sendto");
-	    	exit(1);
-		}
-//*/
-	infile.close();
 	close(sockfd);
+	close(sockfdReceive);
 	return 0;
 }
