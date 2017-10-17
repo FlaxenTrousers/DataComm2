@@ -25,8 +25,7 @@ int randomPortNumber()
 }
 
 packet depacketizeMeCaptain(char * spacket) {
-	char blank[1];
-	packet pack = packet(0, 0, 0, blank);
+	packet pack = packet(0, 0, 0, new char[0]);
 	pack.deserialize(spacket);
 	return pack;
 }
@@ -43,7 +42,8 @@ packet finalCrunch(int expectedSeqnum) {
 
 int main(int argc, char *argv[])
 {
-	int sockfd;
+	int sockfdReceive;
+	int sockfdSend;
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
 	int numbytes;
@@ -65,14 +65,40 @@ int main(int argc, char *argv[])
 
 	// loop through all the results and bind to the first we can
 	for(p = servinfo; p != NULL; p = p->ai_next) {
-		if ((sockfd = socket(p->ai_family, p->ai_socktype,
+		if ((sockfdReceive = socket(p->ai_family, p->ai_socktype,
 				p->ai_protocol)) == -1) {
 			perror("receiver: socket");
 			continue;
 		}
 
-		if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-			close(sockfd);
+		if (bind(sockfdReceive, p->ai_addr, p->ai_addrlen) == -1) {
+			close(sockfdReceive);
+			perror("receiver: bind");
+		}
+
+		break;
+	}
+
+	if (p == NULL) {
+		fprintf(stderr, "receiver: failed to bind socket\n");
+		return 2;
+	}
+
+	if ((rv = getaddrinfo(NULL, argv[3], &hints, &servinfo)) != 0) {
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+		return 1;
+	}
+
+	// loop through all the results and bind to the first we can
+	for(p = servinfo; p != NULL; p = p->ai_next) {
+		if ((sockfdSend = socket(p->ai_family, p->ai_socktype,
+				p->ai_protocol)) == -1) {
+			perror("receiver: socket");
+			continue;
+		}
+
+		if (bind(sockfdSend, p->ai_addr, p->ai_addrlen) == -1) {
+			close(sockfdSend);
 			perror("receiver: bind");
 		}
 
@@ -88,7 +114,7 @@ int main(int argc, char *argv[])
 
 	while(1) {
 		addr_len = sizeof their_addr;
-		if ((numbytes = recvfrom(sockfd, buf, MAXBUFLEN - 1, 0,
+		if ((numbytes = recvfrom(sockfdReceive, buf, MAXBUFLEN - 1, 0,
 			(struct sockaddr *)&their_addr, &addr_len)) == -1) {
 			perror("recvfrom");
 			exit(1);
@@ -102,7 +128,7 @@ int main(int argc, char *argv[])
 			char spacketACK[7];
 			packet ACKpack = ACKnCrunch(expectedSeqnum);
 			ACKpack.serialize(spacketACK);
-			if ((numbytes = sendto(sockfd, spacket, strlen(spacket), 0,
+			if ((numbytes = sendto(sockfdSend, spacketACK, strlen(spacket), 0,
 				p->ai_addr, p->ai_addrlen)) == -1) {
 				perror("ACK: sendto");
 				exit(1);
@@ -114,7 +140,7 @@ int main(int argc, char *argv[])
 			char spacketFinalACK[7];
 			packet finalACK = finalCrunch(expectedSeqnum);
 			finalACK.serialize(spacketFinalACK);
-			if ((numbytes = sendto(sockfd, spacketFinalACK, strlen(spacketFinalACK), 0,
+			if ((numbytes = sendto(sockfdSend, spacketFinalACK, strlen(spacketFinalACK), 0,
 				p->ai_addr, p->ai_addrlen)) == -1) {
 				perror("ACK: sendto");
 				exit(1);
@@ -123,7 +149,8 @@ int main(int argc, char *argv[])
 		} 
 	}
 
-	close(sockfd);
+	close(sockfdReceive);
+	close(sockfdSend);
 
 	return 0;
 }
