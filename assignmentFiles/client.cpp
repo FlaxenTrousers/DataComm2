@@ -41,9 +41,11 @@ int sendPackets(char * file, int sockfd, struct addrinfo *p)
 	int packetNumber = 0;
 	ifstream infile;
 	infile.open(file);
+	bool endOfFile = false;
 
 	while(!infile.eof())
 	{
+		bzero(packetData);
 		// Seek to proper space in file.
 		infile.seekg(packetNumber * 30);
 		infile.read(packetData, sizeof packetData);
@@ -61,7 +63,7 @@ int sendPackets(char * file, int sockfd, struct addrinfo *p)
 		printf("%s\n", spacket);
 		if ((numBytes = sendto(sockfd, spacket, strlen(spacket), 0, p->ai_addr, p->ai_addrlen)) == -1) 
 	    {
-	   		perror("talker: sendto");
+	   		perror("Packettalker: sendto");
 	    	exit(1);
 		}
 	}
@@ -71,30 +73,14 @@ int sendPackets(char * file, int sockfd, struct addrinfo *p)
 	Qpack.serialize(Qpacket);
 	if ((numBytes = sendto(sockfd, Qpacket, strlen(Qpacket), 0, p->ai_addr, p->ai_addrlen)) == -1) 
     {
-   		perror("talker: sendto");
+   		perror("EOTtalker: sendto");
     	exit(1);
 	}
 
-
+	close(sockfd);
 	infile.close();
 	return seqNum;
 }
-
-void sendEOTPacket(int sockfd, struct addrinfo *p, int seqNum)
-{
-	int numBytes;
-
-	packet qpack = packet(3, (seqNum+1)%8, 0, new char[0]);
-	char qpacket[38];
-	qpack.serialize(qpacket); 
-
-	if ((numBytes = sendto(sockfd, qpacket, strlen(qpacket), 0, p->ai_addr, p->ai_addrlen)) == -1) 
-    {
-   		perror("talker: sendto");
-    	exit(1);
-	}
-}
-
 
 int main(int argc, char* argv[])
 {
@@ -199,7 +185,6 @@ int main(int argc, char* argv[])
 
 	sendPackets(argv[4], sockfd, p);
 
-	//sendEOTPacket(sockfd, p, );
 	// receive ACKS
 	addr_len = sizeof their_addr;
 	if ((numbytes = recvfrom(sockfdReceive, buf, MAXBUFLEN - 1, 0,
@@ -210,7 +195,7 @@ int main(int argc, char* argv[])
 	}
 	printf("%s\n", buf);
 
-	close(sockfd);
+	
 	close(sockfdReceive);
 	return 0;
 }
