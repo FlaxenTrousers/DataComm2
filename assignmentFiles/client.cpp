@@ -69,6 +69,20 @@ void sendPackets(char * file, int sockfd, struct addrinfo *p)
 	infile.close();
 }
 
+void sendEOTPacket(char * file, int sockfd, struct addrinfo *p)
+{
+	int numBytes;
+
+	packet qpack = packet(3, 0, 0, NULL);
+	char qpacket[8];
+	qpack.serialize(qpacket); 
+
+	if ((numBytes = sendto(sockfd, qpacket, strlen(qpacket), 0, p->ai_addr, p->ai_addrlen)) == -1) 
+    {
+   		perror("talker: sendto");
+    	exit(1);
+	}
+}
 
 
 int main(int argc, char* argv[])
@@ -174,17 +188,7 @@ int main(int argc, char* argv[])
 
 	sendPackets(argv[4], sockfd, p);
 
-/*
-	packet qpack = packet(3, 0, 0, NULL);
-	char qpacket[8];
-	qpack.serialize(qpacket); 
 
-	if ((numBytes = sendto(sockfd, qpacket, strlen(qpacket), 0, p->ai_addr, p->ai_addrlen)) == -1) 
-    {
-   		perror("talker: sendto");
-    	exit(1);
-	}
-*/
 	// receive ACKS
 	addr_len = sizeof their_addr;
 	if ((numbytes = recvfrom(sockfdReceive, buf, MAXBUFLEN - 1, 0,
