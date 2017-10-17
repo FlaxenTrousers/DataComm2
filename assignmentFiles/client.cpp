@@ -42,7 +42,7 @@ void sendPackets(char * file, int sockfd, struct addrinfo *p)
 	ifstream infile;
 	infile.open(file);
 
-	while(!infile.eof())
+//	while(!infile.eof())
 	{
 		// Seek to proper space in file.
 		infile.seekg(packetNumber * 30);
