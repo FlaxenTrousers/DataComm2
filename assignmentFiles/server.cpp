@@ -106,6 +106,8 @@ int main(int argc, char *argv[])
 	}
 
 	freeaddrinfo(servinfo);
+	//ofstream output;
+	//output.open("output.txt");
 
 	while(1) {
 		addr_len = sizeof their_addr;
@@ -128,6 +130,36 @@ int main(int argc, char *argv[])
 			finalACK.serialize(spacketFinalACK);
 			if ((numbytes = sendto(sockfdSend, spacketFinalACK, strlen(spacketFinalACK), 0,
 =======
+
+		if (pack.getType() == 3) {
+			// send final ACK
+			char spacketFinalACK[7];
+			packet finalACK = finalCrunch(expectedSeqnum);
+			finalACK.serialize(spacketFinalACK);
+			if ((numbytes = sendto(sockfdSend, spacketFinalACK, strlen(spacketFinalACK), 0,
+				p->ai_addr, p->ai_addrlen)) == -1) {
+				perror("ACK: sendto");
+				exit(1);
+			}
+			break;
+		} 
+
+		if (expectedSeqnum == pack.getSeqNum()) {
+			char spacketACK[7];
+			packet ACKpack = ACKnCrunch(expectedSeqnum);
+			ACKpack.serialize(spacketACK);
+			if ((numbytes = sendto(sockfdSend, spacketACK, strlen(spacketACK), 0,
+				p->ai_addr, p->ai_addrlen)) == -1) {
+				perror("ACK: sendto");
+				exit(1);
+			}
+			expectedSeqnum += 1;
+		}
+		else {
+			char spacketACK[7];
+			packet ACKpack = ACKnCrunch(expectedSeqnum - 1);
+			ACKpack.serialize(spacketACK);
+			if ((numbytes = sendto(sockfdSend, spacketACK, strlen(spacketACK), 0,
 >>>>>>> master
 				p->ai_addr, p->ai_addrlen)) == -1) {
 				perror("ACK: sendto");
