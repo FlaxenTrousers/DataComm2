@@ -47,16 +47,18 @@ void sendPackets(char * file, int sockfd, struct addrinfo *p)
 		// Seek to proper space in file.
 		infile.seekg(packetNumber * 30);
 		infile.read(packetData, sizeof packetData);
-		actualRead;
+		
+		actualRead = infile.gcount();
+		if (actualRead == 0) break;
 		//Make packet and increase sequence number.
-		packet pack = packet(1, seqNum, 30, packetData);
+		packet pack = packet(1, seqNum, actualRead, packetData);
 		seqNum = (seqNum + 1) % SEQNUM;
 		packetNumber++;
 
 		// Serialize packet and send data.
-		char spacket[37];
+		char spacket[actualRead+7];
 		pack.serialize(spacket);
-
+		printf("%s\n", spacket);
 		if ((numBytes = sendto(sockfd, spacket, strlen(spacket), 0, p->ai_addr, p->ai_addrlen)) == -1) 
 	    {
 	   		perror("talker: sendto");
