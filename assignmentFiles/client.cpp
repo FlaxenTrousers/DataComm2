@@ -22,6 +22,7 @@
 #include "packet.cpp"
 
 #define MAXBUFLEN 100
+#define PACKETSIZE 30
 #define SEQNUM 8
 #define WINDOWSIZE 7  // Size of the sliding window. It will be the number of seq numbers minus 1.
 
@@ -31,36 +32,44 @@ int sendPackets(char * file, int sockfd, struct addrinfo *p)
 {
 	// Build Packets
 	//
-	char packetData[30];
+	char packetData[PACKETSIZE];
 	int numBytes;
 	// Vars for file reading
 	int actualRead = 0;
-	int wholePacks = 0;
-	int extraBytes = 0;
 	int seqNum = 0;
 	int packetNumber = 0;
 	ifstream infile;
 	infile.open(file);
 	bool endOfFile = false;
 
+	//Log Files
+	ofstream seqlog, acklog;
+	seqlog.open("seqnum.log");
+	acklog.open("ack.log");
+
 	while(!infile.eof())
 	{
-		bzero(packetData);
+		bzero(packetData, PACKETSIZE);
 		// Seek to proper space in file.
-		infile.seekg(packetNumber * 30);
+		infile.seekg(packetNumber * PACKETSIZE);
 		infile.read(packetData, sizeof packetData);
 		
 		actualRead = infile.gcount();
+
+		printf("%d\n", actualRead);
 		if (actualRead == 0) break;
+
 		//Make packet and increase sequence number.
 		packet pack = packet(1, seqNum, actualRead, packetData);
+
+		seqlog << seqNum;
+
 		seqNum = (seqNum + 1) % SEQNUM;
 		packetNumber++;
 
 		// Serialize packet and send data.
 		char spacket[actualRead+8];
 		pack.serialize(spacket);
-		printf("%s\n", spacket);
 		if ((numBytes = sendto(sockfd, spacket, strlen(spacket), 0, p->ai_addr, p->ai_addrlen)) == -1) 
 	    {
 	   		perror("Packettalker: sendto");
@@ -69,8 +78,11 @@ int sendPackets(char * file, int sockfd, struct addrinfo *p)
 	}
 
 	packet Qpack = packet(3, seqNum, 0, NULL);
-	char Qpacket[38];
+	char Qpacket[PACKETSIZE+8];
 	Qpack.serialize(Qpacket);
+
+	seqlog << seqNum;
+
 	if ((numBytes = sendto(sockfd, Qpacket, strlen(Qpacket), 0, p->ai_addr, p->ai_addrlen)) == -1) 
     {
    		perror("EOTtalker: sendto");
@@ -79,20 +91,13 @@ int sendPackets(char * file, int sockfd, struct addrinfo *p)
 
 	close(sockfd);
 	infile.close();
+	seqlog.close();
+	acklog.close();
 	return seqNum;
 }
 
 int main(int argc, char* argv[])
 {
-/* 
-	arg[1] = <emulatorName: host address of the emulator>,
-	arg[2] = <sendToEmulator: UDP port number used by the emulator to receive
-				data from the client>
-	arg[3] = <receiveFromEmulator: UDP port number used by the client to receive
-				ACKs from the emulator>,
-	arg[4] = <fileName: name of the file to be transferred> 
-*/
-
 	if (argc < 5)
 	{
 		printf("Incomplete number of arguments. Arguments follow the form:\n <emulatorName: host address of the emulator>, <sendToEmulator: UDP port number used by the emulator to receive data from the client>, <receiveFromEmulator: UDP port number used by the client to receive ACKs from the emulator>, <fileName: name of the file to be transferred> ");
@@ -194,7 +199,6 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 	printf("%s\n", buf);
-
 	
 	close(sockfdReceive);
 	return 0;
